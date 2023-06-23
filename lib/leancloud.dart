@@ -92,8 +92,14 @@ class LeanCloud {
   static late _LCHttpClient _httpClient;
 
   /// Initialization
-  static void initialize(String appId, String appKey,
-      {String? server, LCQueryCache? queryCache}) {
+  static void initialize(
+    String appId,
+    String appKey, {
+    String? server,
+    LCQueryCache? queryCache,
+    bool cors = false,
+    String? masterKey,
+  }) {
     if (isNullOrEmpty(appId)) {
       throw new ArgumentError.notNull('appId');
     }
@@ -111,7 +117,15 @@ class LeanCloud {
         LCFriendshipRequest.ClassName, () => new LCFriendshipRequest());
 
     _httpClient = new _LCHttpClient(
-        appId, appKey, server, SDKVersion, APIVersion, queryCache);
+      appId,
+      appKey,
+      server,
+      SDKVersion,
+      APIVersion,
+      queryCache,
+      cors: cors,
+      masterKey: masterKey,
+    );
   }
 
   static Future<bool> clearAllCache() {

@@ -11,6 +11,8 @@ class _LCHttpClient {
 
   String apiVersion;
 
+  String? _masterKey;
+
   late _LCAppRouter _appRouter;
 
   late Dio _dio;
@@ -19,12 +21,25 @@ class _LCHttpClient {
 
   DioCacheManager? _cacheManager;
 
-  _LCHttpClient(this.appId, this.appKey, this.server, this.sdkVersion,
-      this.apiVersion, LCQueryCache? queryCache) {
+  _LCHttpClient(
+    this.appId,
+    this.appKey,
+    this.server,
+    this.sdkVersion,
+    this.apiVersion,
+    LCQueryCache? queryCache, {
+    bool cors = false,
+    String? masterKey,
+  }) : _masterKey = masterKey {
+    _masterKey = masterKey;
     _appRouter = new _LCAppRouter(appId, server);
     BaseOptions options = new BaseOptions(headers: {
       'X-LC-Id': appId,
-      'User-Agent': 'LeanCloud-Flutter-SDK/$sdkVersion'
+      if (_masterKey == null) 'User-Agent': 'LeanCloud-Flutter-SDK/$sdkVersion',
+      if (cors) 'Access-Control-Allow-Origin': '*',
+      if (cors) 'Access-Control-Allow-Credentials': 'true',
+      if (cors) "Access-Control-Allow-Headers": "*",
+      if (cors) "Access-Control-Allow-Methods": "POST,GET,PUT,DELETE",
     }, contentType: 'application/json');
     _dio = new Dio(options);
     if (queryCache != null) {
@@ -135,9 +150,18 @@ class _LCHttpClient {
     Map<String, dynamic> headers = new Map<String, dynamic>();
     int timestamp = DateTime.now().millisecondsSinceEpoch;
     Uint8List data = Utf8Encoder().convert('$timestamp$appKey');
+    if (_masterKey != null) {
+      data = Utf8Encoder().convert('$timestamp$_masterKey');
+    } else {
+      data = Utf8Encoder().convert('$timestamp$appKey');
+    }
     Digest digest = md5.convert(data);
     String sign = hex.encode(digest.bytes);
-    headers['X-LC-Sign'] = '$sign,$timestamp';
+    if (_masterKey != null) {
+      headers['X-LC-Sign'] = '$sign,$timestamp,master';
+    } else {
+      headers['X-LC-Sign'] = '$sign,$timestamp';
+    }
     LCUser? currentUser = await LCUser.getCurrent();
     if (currentUser != null) {
       headers['X-LC-Session'] = currentUser.sessionToken;
